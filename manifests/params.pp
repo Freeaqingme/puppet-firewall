@@ -1,6 +1,21 @@
+# $custom_rule_class
+#   A custom rule class to use.
+#
+# $linuxFw26
+#   The firewall to use for Linux 2.6+ systems. Nftables may be added later
+#
 class firewall::params (
-  $rule_class = 'firewall::rule::iptables'
+  $custom_rule_class = '',
+  $linuxFw26 = 'iptables'
 ) {
+  
+  if $custom_rule_class != '' {
+    $rule_class = $custom_rule_class
+  } elsif $kernel =~ /Linux/ {
+    $rule_class = 'firewall::rule::iptables'
+  } else {
+    $rule_class = ''
+  }
 
   if $rule_class =~ /firewall::rule::iptables/ {
 
