@@ -47,6 +47,7 @@ class firewall::params (
     $enable_v4       = $iptables::enable_v4
     $enable_v6       = $iptables::enable_v6
     $target          = $iptables::default_target
+    $service_name    = 'iptables'
 
   }
 }

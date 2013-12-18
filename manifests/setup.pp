@@ -20,6 +20,7 @@ class firewall::setup (
   $enable_v4        = $firewall::params::enable_v4,
   $enable_v6        = $firewall::params::enable_v6,
   $debug            = false,
+  $service_name     = $firewall::params::service_name,
 
   # Iptables specifics
   $iptables_table   = 'filter',
