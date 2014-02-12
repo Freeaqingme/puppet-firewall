@@ -49,5 +49,11 @@ class firewall::params (
     $target          = $iptables::default_target
     $service_name    = 'iptables'
 
+  } else {
+    if $::operatingsystem == 'FreeBSD' {
+      $enable_v4    = true
+      $enable_v6    = true
+      $service_name = 'pf'
+    }
   }
 }

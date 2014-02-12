@@ -98,6 +98,21 @@
 #
 # [*iptables_target_options*]
 #   A hashmap with key=>values of options to be appended after the target.
+#
+# [*pf_source_table*]
+#   Table name for matching source addresses
+#
+# [*pf_destination_table*]
+#   Table name for matching destination addresses
+#
+# [*pf_max_src_conn*]
+#   Maximum source connections
+#
+# [*pf_max_src_conn_rate*]
+#   Maximum source connections rate (connections per seconds)
+#
+# [*pf_overload_table*]
+#   Table source addresses will be placed in when hitting maximums
 
 define firewall::rule (
   $source           = '',
@@ -131,6 +146,13 @@ define firewall::rule (
   $iptables_explicit_matches = {},
   $iptables_target_options   = {},
   $iptables_rule             = '',
+
+  # PF specifics
+  $pf_source_table      = '',
+  $pf_destination_table = '',
+  $pf_max_src_conn      = '',
+  $pf_max_src_conn_rate = '',
+  $pf_overload_table    = '',
 ) {
 
   include firewall::setup
@@ -244,7 +266,46 @@ define firewall::rule (
     # The get_class_args() call adds a dependency on puppi
     # create_resources($firewall::setup::rule_class, get_class_args())
 
-    fail('No firewall class was matched')
+    # TODO: when rule_class is not iptables, the fallback is always pf, this should be determined better
+    # TODO: chain is determined from iptables variable, what to do with it in pf?
+
+    $real_action = $action ? {
+        /(deny|reject|drop)/ => 'block',
+        default              => 'pass',
+    }
+
+    $pf_direction = $real_direction ? {
+        'input'   => 'in',
+        'output'  => 'out',
+        'forward' => 'rdr',
+        default   => $real_direction
+    }
+
+    # TODO: implement forwarding/redirection
+    if $pf_direction == 'rdr' {
+      fail("direction ${pf_direction} currently not supported")
+    }
+
+    pf::rule { $name:
+      action            => $real_action,
+      direction         => $pf_direction,
+      in_interface      => $in_interface,
+      out_interface     => $out_interface,
+      source            => $real_source,
+      source_v6         => $real_source_v6,
+      source_table      => $pf_source_table,
+      destination       => $real_destination,
+      destination_v6    => $real_destination_v6,
+      destination_table => $pf_destination_table,
+      protocol          => $protocol,
+      port              => $port,
+      order             => $real_order,
+      log               => $log,
+      enable            => $enable,
+      max_src_conn      => $pf_max_src_conn,
+      max_src_conn_rate => $pf_max_src_conn_rate,
+      overload_table    => $pf_overload_table,
+    }
   }
 
 }
