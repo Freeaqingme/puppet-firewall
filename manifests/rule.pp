@@ -167,13 +167,13 @@ define firewall::rule (
     $real_destination = firewall_resolve_locations($destination, '4')
     $real_enable_v4 = any2bool($resolve_failsafe) ? {
       false => $enable_v4,
-      default => 
+      default =>
          (
-           (!('0' != inline_template('<%=@source.length %>') and 
+           (!('0' != inline_template('<%=@source.length %>') and
            '0' == inline_template('<%=@real_source.length %>')) and
            $real_direction == 'input')
           ) or (
-           (!('0' != inline_template('<%=@destination.length %>') and 
+           (!('0' != inline_template('<%=@destination.length %>') and
            '0' == inline_template('<%=@real_destination.length %>')) and
            $real_direction == 'output')
           ) or ($real_direction != 'input' and $real_direction != 'output' ) # This line needs changing. Some time
@@ -189,18 +189,18 @@ define firewall::rule (
     $real_destination_v6 = firewall_resolve_locations($destination_v6, '6')
     $real_enable_v6 = any2bool($resolve_failsafe) ? {
       false => $enable_v6,
-      default => 
+      default =>
          (
-           (!('0' != inline_template('<%=@source_v6.length %>') and 
+           (!('0' != inline_template('<%=@source_v6.length %>') and
            '0' == inline_template('<%=@real_source_v6.length %>')) and
            $real_direction == 'input')
           ) or (
-           (!('0' != inline_template('<%=@destination_v6.length %>') and 
+           (!('0' != inline_template('<%=@destination_v6.length %>') and
            '0' == inline_template('<%=@real_destination_v6.length %>')) and
            $real_direction == 'output')
           ) or ($real_direction != 'input' and $real_direction != 'output' ) # This line needs changing. Some time
     }
-    
+
   } else {
     $real_source_v6      = $source_v6
     $real_destination_v6 = $destination_v6
@@ -228,7 +228,7 @@ define firewall::rule (
       ''      => $firewall::setup::iptables_chains[$real_direction],
       default => $iptables_chain
     }
-    
+
     $real_iptables_target = $iptables_target ? {
       ''      => $firewall::setup::iptables_targets[$action],
       default => $iptables_target
@@ -275,10 +275,12 @@ define firewall::rule (
     }
 
     $pf_direction = $real_direction ? {
-        'input'   => 'in',
-        'output'  => 'out',
-        'forward' => 'rdr',
-        default   => $real_direction
+        'input'    => 'in',
+        'incoming' => 'in',
+        'output'   => 'out',
+        'outgoing' => 'out',
+        'forward'  => 'rdr',
+        default    => $real_direction
     }
 
     # TODO: implement forwarding/redirection
