@@ -105,6 +105,12 @@
 # [*pf_destination_table*]
 #   Table name for matching destination addresses
 #
+# [*pf_max_src_nodes*]
+#   Maximum different source IPs
+#
+# [*pf_max_src_states*]
+#   Maximum amount of states per IP
+#
 # [*pf_max_src_conn*]
 #   Maximum source connections
 #
@@ -150,6 +156,8 @@ define firewall::rule (
   # PF specifics
   $pf_source_table      = '',
   $pf_destination_table = '',
+  $pf_max_src_nodes     = '',
+  $pf_max_src_states    = '',
   $pf_max_src_conn      = '',
   $pf_max_src_conn_rate = '',
   $pf_overload_table    = '',
@@ -261,12 +269,8 @@ define firewall::rule (
       target_options   => $iptables_target_options,
       rule             => $iptables_rule
     }
-  } else {
-    # TODO: Would rather use this statement, but can't. Blaming a Puppet Bug (TBD)
-    # The get_class_args() call adds a dependency on puppi
-    # create_resources($firewall::setup::rule_class, get_class_args())
-
-    # TODO: when rule_class is not iptables, the fallback is always pf, this should be determined better
+  }
+  elsif ($firewall::setup::rule_class =~ /firewall::rule::pf/) {
     # TODO: chain is determined from iptables variable, what to do with it in pf?
 
     $real_action = $action ? {
@@ -304,10 +308,15 @@ define firewall::rule (
       order             => $real_order,
       log               => $log,
       enable            => $enable,
+      max_src_nodes     => $pf_max_src_nodes,
+      max_src_states    => $pf_max_src_states,
       max_src_conn      => $pf_max_src_conn,
       max_src_conn_rate => $pf_max_src_conn_rate,
       overload_table    => $pf_overload_table,
     }
+  }
+  else {
+    fail("${::firewall::setup::rule_class} unsupported")
   }
 
 }

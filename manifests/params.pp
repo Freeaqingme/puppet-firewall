@@ -8,11 +8,13 @@ class firewall::params (
   $custom_rule_class = '',
   $linuxFw26 = 'iptables'
 ) {
-  
+
   if $custom_rule_class != '' {
     $rule_class = $custom_rule_class
   } elsif $kernel =~ /Linux/ {
     $rule_class = 'firewall::rule::iptables'
+  } elsif $operatingsystem =~ /FreeBSD/ {
+    $rule_class = 'firewall::rule::pf'
   } else {
     $rule_class = ''
   }
@@ -49,11 +51,11 @@ class firewall::params (
     $target          = $iptables::default_target
     $service_name    = 'iptables'
 
-  } else {
-    if $::operatingsystem == 'FreeBSD' {
-      $enable_v4    = true
-      $enable_v6    = true
-      $service_name = 'pf'
-    }
+  } elsif $rule_class =~ /firewall::rule::pf/ {
+
+    $enable_v4    = true
+    $enable_v6    = true
+    $service_name = 'pf'
+
   }
 }
