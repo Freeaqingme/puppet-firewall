@@ -4,9 +4,7 @@
 #
 define firewall (
   $source         = '',
-  $source_v6      = '',
   $destination    = '',
-  $destination_v6 = '',
   $protocol       = '',
   $port           = '',
   $action         = '',
@@ -27,9 +25,7 @@ define firewall (
 
   firewall::rule { $name:
     source         => $source,
-    source_v6      => $source_v6,
     destination    => $destination,
-    destination_v6 => $destination_v6,
     protocol       => $protocol,
     port           => $port,
     action         => $action,

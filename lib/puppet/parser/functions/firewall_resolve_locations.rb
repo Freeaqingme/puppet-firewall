@@ -12,7 +12,6 @@ Resolve an array containing IP's and hostnames to hostnames.
     Puppet::Parser::Functions.function(:nslookup)
     require 'ipaddr'
 
-
     if locations == ''
       return ''
     elsif locations.is_a?(String)
@@ -24,7 +23,12 @@ Resolve an array containing IP's and hostnames to hostnames.
 
     locations.each { |location|
       if !(IPAddr.new(location) rescue nil).nil?
-        out << location
+	if (IPAddr.new(location).ipv4?() && ip_version == "4")
+        	out << location
+	end
+	if (IPAddr.new(location).ipv6?() && ip_version == "6")
+        	out << location
+	end
       else
         out.concat(function_nslookup([ location, type ]))
       end

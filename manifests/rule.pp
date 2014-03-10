@@ -8,15 +8,9 @@
 #   The packets source address (in iptables --source
 #   supported syntax). Can be an array of sources.
 #
-# [*source_v6*]
-#    The packets IPv6 source address. Can be an array of sources.
-#
 # [*destination*]
 #    The packets destination (in iptables --destination
 #    supported syntax). Can be an array of destinations.
-#
-# [*destination_v6*]
-#   The packets IPv6 destination. Can be an array of destinations.
 #
 # [*protocol*]
 #   The transport protocol (tcp,udp,icmp, anything from /etc/protocols )
@@ -63,20 +57,6 @@
 # [*debug*]
 #   Enable debugging.
 #
-# [*resolve_locations*]
-#   Resolve any hostnames that are in $source, $source_v6,
-#   $destination and $destination_v6. This means that:
-#   V4: [ '127.0.0.1', 'www.example42.com' ]
-#   Becomes: [ '127.0.0.1', '176.9.65.210' ]
-#
-#   V6: [ '::1', 'www.example42.com' ]
-#   Becomes: [ '::1' ] (example42.com doesn't resolve any AAAA records yet
-#
-# [*resolve_failsafe*]
-#   Bool. Default true. Disable the given IP version if no hosts could be
-#   resolved. Looks at source ip if $real_direction == input, destination ip if
-#   $real_direction == output. Does nothing with forward traffic (yet).
-#
 # [*iptables_chain*]
 #   The iptables chain to work on (default INPUT).
 #   Write it UPPERCASE coherently with iptables syntax
@@ -122,9 +102,7 @@
 
 define firewall::rule (
   $source           = '',
-  $source_v6        = '',
   $destination      = '',
-  $destination_v6   = '',
   $protocol         = '',
   $port             = '',
   $action           = '',
@@ -142,7 +120,6 @@ define firewall::rule (
   $enable_v6        = $firewall::setup::enable_v6,
   $debug            = false,
   $resolve_locations = true,
-  $resolve_failsafe = true,
 
   # Iptables specifics
   $iptables_table            = 'filter',
@@ -170,50 +147,66 @@ define firewall::rule (
     default => inline_template('<%= @direction.downcase %>')
   }
 
-  if any2bool($enable_v4) and any2bool($resolve_locations) {
-    $real_source = firewall_resolve_locations($source, '4')
-    $real_destination = firewall_resolve_locations($destination, '4')
-    $real_enable_v4 = any2bool($resolve_failsafe) ? {
-      false => $enable_v4,
-      default =>
-         (
-           (!('0' != inline_template('<%=@source.length %>') and
-           '0' == inline_template('<%=@real_source.length %>')) and
-           $real_direction == 'input')
-          ) or (
-           (!('0' != inline_template('<%=@destination.length %>') and
-           '0' == inline_template('<%=@real_destination.length %>')) and
-           $real_direction == 'output')
-          ) or ($real_direction != 'input' and $real_direction != 'output' ) # This line needs changing. Some time
-    }
+  if is_array($source) {
+    $source_a = $source
   } else {
-    $real_source      = $source
-    $real_destination = $destination
-    $real_enable_v4   = $enable_v4
+    $source_a = $source ? {
+      ''                => [],
+      default           => [ $source ]
+    }
+  }
+  
+  if is_array($destination) {
+    $destination_a = $destination
+  } else {
+    $destination_a = $destination ? {
+      ''                     => [],
+      default                => [ $destination ]
+    }
   }
 
-  if any2bool($enable_v6) and any2bool($resolve_locations) {
-    $real_source_v6 = firewall_resolve_locations($source_v6, '6')
-    $real_destination_v6 = firewall_resolve_locations($destination_v6, '6')
-    $real_enable_v6 = any2bool($resolve_failsafe) ? {
-      false => $enable_v6,
-      default =>
-         (
-           (!('0' != inline_template('<%=@source_v6.length %>') and
-           '0' == inline_template('<%=@real_source_v6.length %>')) and
-           $real_direction == 'input')
-          ) or (
-           (!('0' != inline_template('<%=@destination_v6.length %>') and
-           '0' == inline_template('<%=@real_destination_v6.length %>')) and
-           $real_direction == 'output')
-          ) or ($real_direction != 'input' and $real_direction != 'output' ) # This line needs changing. Some time
+  if size($source_a) == 0 and size($destination_a) == 0 {
+    $real_source_v4 = []
+    $real_source_v6 = []
+    $real_destination_v4 = []
+    $real_destination_v6 = []
+    $real_enable_v4 = true
+    $real_enable_v6 = true
+  } else {
+    $source2_v6      = firewall_resolve_locations($source_a, '6')
+    $source_v4       = firewall_resolve_locations($source_a, '4')
+    $destination_v4  = firewall_resolve_locations($destination_a, '4')
+    $destination2_v6 = firewall_resolve_locations($destination_a, '6')
+
+    if (size($source_a) == 0 and size($destination_a) == 0) {
+      $real_enable_v4 = $enable_v4
+      $real_enable_v6 = $enable_v6
+    } else {
+      if ((size($source_a) != 0 and size($source_v4) == 0) or
+          (size($destination_a) != 0 and size($destination_v4) == 0)) {
+        $real_enable_v4 = false
+      } else {
+        $real_enable_v4 = $enable_v4
+      }
+      if ((size($source_a) != 0 and size($source2_v6) == 0) or
+          (size($destination_a) != 0 and size($destination2_v6) == 0)) {
+        $real_enable_v6 = false
+      } else {
+        $real_enable_v6 = $enable_v6
+      }
     }
 
-  } else {
-    $real_source_v6      = $source_v6
-    $real_destination_v6 = $destination_v6
-    $real_enable_v6      = $enable_v6
+    if $real_enable_v4 == false and $real_enable_v6 == false {
+      fail('A firewall rule was defined but neither IPv6 nor IPv4 was found usable.')
+    }
+
+    $real_source = $source_v4
+    $real_destination = $destination_v4
+    $real_source_v6 = $source2_v6
+    $real_destination_v6 = $destination2_v6
+
   }
+ 
 
   if ($firewall::setup::rule_class =~ /firewall::rule::iptables/) {
 
@@ -314,8 +307,7 @@ define firewall::rule (
       max_src_conn_rate => $pf_max_src_conn_rate,
       overload_table    => $pf_overload_table,
     }
-  }
-  else {
+  } else {
     fail("${::firewall::setup::rule_class} unsupported")
   }
 
