@@ -138,7 +138,15 @@ define firewall::rule (
   $pf_max_src_conn      = '',
   $pf_max_src_conn_rate = '',
   $pf_overload_table    = '',
+
+  $source_v6 = '', # remove me
+  $destination_v6 = '', # remove me
+  $resolve_failsafe = '', #remove me
 ) {
+
+#  if $::fqdn == 'icingarelay1.transip.us' and $name == 'apache_tcp_80' {
+#    notify { "${name}: enabled v4/6: ${enable_v4} | ${enable_v6} | ${source} | ${destination} | ${apache::manage_firewall}": }
+#  }
 
   include firewall::setup
 
@@ -155,7 +163,7 @@ define firewall::rule (
       default           => [ $source ]
     }
   }
-  
+
   if is_array($destination) {
     $destination_a = $destination
   } else {
@@ -196,8 +204,8 @@ define firewall::rule (
       }
     }
 
-    if $real_enable_v4 == false and $real_enable_v6 == false {
-      fail('A firewall rule was defined but neither IPv6 nor IPv4 was found usable.')
+    if $real_enable_v4 == false and $real_enable_v6 == false and any2bool($enable) == true {
+      fail("A firewall rule was defined but neither IPv6 nor IPv4 was found usable in firewall::rule ${name}")
     }
 
     $real_source = $source_v4
@@ -206,7 +214,7 @@ define firewall::rule (
     $real_destination_v6 = $destination2_v6
 
   }
- 
+
 
   if ($firewall::setup::rule_class =~ /firewall::rule::iptables/) {
 
@@ -306,6 +314,36 @@ define firewall::rule (
       max_src_conn      => $pf_max_src_conn,
       max_src_conn_rate => $pf_max_src_conn_rate,
       overload_table    => $pf_overload_table,
+    }
+  }
+  elsif ($firewall::setup::rule_class =~ /firewall::rule::ipfilter/) {
+    $real_action = $action ? {
+        /(deny|reject|drop)/ => 'block',
+        default              => 'pass',
+    }
+
+    $ipfilter_direction = $real_direction ? {
+        'input'    => 'in',
+        'incoming' => 'in',
+        'output'   => 'out',
+        'outgoing' => 'out',
+        default    => $real_direction
+    }
+
+    ipfilter::rule { $name:
+      action            => $real_action,
+      direction         => $ipfilter_direction,
+      in_interface      => $in_interface,
+      out_interface     => $out_interface,
+      source            => $real_source,
+      source_v6         => $real_source_v6,
+      destination       => $real_destination,
+      destination_v6    => $real_destination_v6,
+      protocol          => $protocol,
+      port              => $port,
+      order             => $real_order,
+      log               => $log,
+      enable            => $enable,
     }
   } else {
     fail("${::firewall::setup::rule_class} unsupported")

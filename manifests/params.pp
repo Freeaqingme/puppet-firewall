@@ -15,6 +15,8 @@ class firewall::params (
     $rule_class = 'firewall::rule::iptables'
   } elsif $operatingsystem =~ /FreeBSD/ {
     $rule_class = 'firewall::rule::pf'
+  } elsif $operatingsystem =~ /(?i:Solaris)/ {
+    $rule_class = 'firewall::rule::ipfilter'
   } else {
     $rule_class = ''
   }
@@ -57,5 +59,11 @@ class firewall::params (
     $enable_v6    = true
     $service_name = 'pf'
 
+  } elsif $rule_class =~ /firewall::rule::ipfilter/ {
+    # TODO: ipfilter doesn't parse the v6 rules,
+    # maybe because our machines don't use v6?
+    $enable_v4    = true
+    $enable_v6    = true
+    $service_name = 'ipfilter'
   }
 }
