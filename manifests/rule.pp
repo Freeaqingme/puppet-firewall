@@ -144,10 +144,6 @@ define firewall::rule (
   $resolve_failsafe = '', #remove me
 ) {
 
-#  if $::fqdn == 'icingarelay1.transip.us' and $name == 'apache_tcp_80' {
-#    notify { "${name}: enabled v4/6: ${enable_v4} | ${enable_v6} | ${source} | ${destination} | ${apache::manage_firewall}": }
-#  }
-
   include firewall::setup
 
   $real_direction = $direction ? {
