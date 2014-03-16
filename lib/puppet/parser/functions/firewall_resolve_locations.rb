@@ -34,6 +34,6 @@ Resolve an array containing IP's and hostnames to hostnames.
       end
     }
 
-    return out.length > 0 ? out : ''
+    return out.length > 0 ? out :''
   end
 end

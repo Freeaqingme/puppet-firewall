@@ -12,6 +12,12 @@
 #    The packets destination (in iptables --destination
 #    supported syntax). Can be an array of destinations.
 #
+# [*source_collection*]
+#   Target source name for matching source addresses
+#
+# [*destination_collection*]
+#   Target collection name for matching destination addresses
+#
 # [*protocol*]
 #   The transport protocol (tcp,udp,icmp, anything from /etc/protocols )
 #
@@ -79,12 +85,6 @@
 # [*iptables_target_options*]
 #   A hashmap with key=>values of options to be appended after the target.
 #
-# [*pf_source_table*]
-#   Table name for matching source addresses
-#
-# [*pf_destination_table*]
-#   Table name for matching destination addresses
-#
 # [*pf_max_src_nodes*]
 #   Maximum different source IPs
 #
@@ -101,25 +101,27 @@
 #   Table source addresses will be placed in when hitting maximums
 
 define firewall::rule (
-  $source           = '',
-  $destination      = '',
-  $protocol         = '',
-  $port             = '',
-  $action           = '',
-  $direction        = '',
-  $order            = '',
-  $in_interface     = '',
-  $out_interface    = '',
-  $log              = $firewall::setup::log,
-  $log_prefix       = $firewall::setup::log_prefix,
-  $log_limit_burst  = $firewall::setup::log_limit_burst,
-  $log_limit        = $firewall::setup::log_limit,
-  $log_level        = $firewall::setup::log_level,
-  $enable           = true,
-  $enable_v4        = $firewall::setup::enable_v4,
-  $enable_v6        = $firewall::setup::enable_v6,
-  $debug            = false,
-  $resolve_locations = true,
+  $source                 = '',
+  $destination            = '',
+  $source_collection      = '',
+  $destination_collection = '',
+  $protocol               = '',
+  $port                   = '',
+  $action                 = '',
+  $direction              = '',
+  $order                  = '',
+  $in_interface           = '',
+  $out_interface          = '',
+  $log                    = $firewall::setup::log,
+  $log_prefix             = $firewall::setup::log_prefix,
+  $log_limit_burst        = $firewall::setup::log_limit_burst,
+  $log_limit              = $firewall::setup::log_limit,
+  $log_level              = $firewall::setup::log_level,
+  $enable                 = true,
+  $enable_v4              = $firewall::setup::enable_v4,
+  $enable_v6              = $firewall::setup::enable_v6,
+  $debug                  = false,
+  $resolve_locations      = true,
 
   # Iptables specifics
   $iptables_table            = 'filter',
@@ -131,8 +133,6 @@ define firewall::rule (
   $iptables_rule             = '',
 
   # PF specifics
-  $pf_source_table      = '',
-  $pf_destination_table = '',
   $pf_max_src_nodes     = '',
   $pf_max_src_states    = '',
   $pf_max_src_conn      = '',
@@ -218,6 +218,10 @@ define firewall::rule (
 
   if ($firewall::setup::rule_class =~ /firewall::rule::iptables/) {
 
+    if $source_collection != '' or $destination_collection != '' {
+      fail('No collection support for iptables yet')
+    }
+
     # Embedded here for performance reasons
 
     # FIXME: Unsure if this should be in firewall or iptables. Maybe both?
@@ -300,10 +304,10 @@ define firewall::rule (
       out_interface     => $out_interface,
       source            => $real_source,
       source_v6         => $real_source_v6,
-      source_table      => $pf_source_table,
+      source_table      => $source_collection,
       destination       => $real_destination,
       destination_v6    => $real_destination_v6,
-      destination_table => $pf_destination_table,
+      destination_table => $destination_collection,
       protocol          => $protocol,
       port              => $port,
       order             => $real_order,
@@ -317,6 +321,12 @@ define firewall::rule (
     }
   }
   elsif ($firewall::setup::rule_class =~ /firewall::rule::ipfilter/) {
+
+    if $source_collection != '' or $destination_collection != '' {
+      fail('No collection support for ipf yet')
+    }
+
+
     $real_action = $action ? {
         /(deny|reject|drop)/ => 'block',
         default              => 'pass',
