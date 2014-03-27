@@ -24,6 +24,9 @@
 # [*port*]
 #   The DESTINATION port
 #
+# [*sport*]
+#   The SOURCE port
+#
 # [*action*]
 #   Either 'drop', 'deny' or 'accept'
 #
@@ -107,6 +110,7 @@ define firewall::rule (
   $destination_collection = '',
   $protocol               = '',
   $port                   = '',
+  $sport                  = '',
   $action                 = '',
   $direction              = '',
   $order                  = '',
@@ -224,8 +228,8 @@ define firewall::rule (
     # TODO: Move to iptables - beware of implicit-matches though
     # iptables-restore v1.3.5: Unknown arg `--dport'
     # -A INPUT  --dport 21   -j REJECT
-    if ($protocol == '') and ($port) {
-      fail('FIREWALL: Protocol must be set if port is set.')
+    if ($protocol == '') and ($port or $sport) {
+      fail('FIREWALL: Protocol must be set if port or sport is set.')
     }
 
     $real_order = $order ? {
@@ -255,6 +259,7 @@ define firewall::rule (
       destination_v6   => $real_destination_v6,
       protocol         => $protocol,
       port             => $port,
+      sport            => $sport,
       order            => $real_order,
       log              => $log,
       log_prefix       => $log_prefix,
@@ -306,6 +311,7 @@ define firewall::rule (
       destination_table => $destination_collection,
       protocol          => $protocol,
       port              => $port,
+      sport             => $sport,
       order             => $real_order,
       log               => $log,
       enable            => $enable,
@@ -347,6 +353,7 @@ define firewall::rule (
       destination_v6    => $real_destination_v6,
       protocol          => $protocol,
       port              => $port,
+      sport             => $sport,
       order             => $real_order,
       log               => $log,
       enable            => $enable,
